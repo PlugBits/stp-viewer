@@ -423,6 +423,7 @@ body { height: 100dvh; }
     <button class="tool-btn" id="btn-view"><span class="icon">⊞</span><span data-i18n="btnView">ビュー</span></button>
     <button class="tool-btn" id="btn-wire"><span class="icon">⬡</span><span data-i18n="btnWire">ワイヤー</span></button>
     <button class="tool-btn" id="btn-edge"><span class="icon">◫</span><span data-i18n="btnEdge">エッジ</span></button>
+    <button class="tool-btn active" id="btn-axis"><span class="icon">⌖</span><span data-i18n="btnAxis">座標軸</span></button>
     <div class="tool-sep"></div>
     <button class="tool-btn" id="btn-face"><span class="icon">◉</span><span data-i18n="btnFace">面を選ぶ</span></button>
     <div class="tool-sep"></div>
@@ -483,7 +484,7 @@ const I18N = {
     partsTitle: '部品ツリー',
     showAll: '全表示', makeTransparent: '半透明',
     explode: '簡易分解',
-    btnFit: '全体表示', btnView: 'ビュー', btnWire: 'ワイヤー', btnEdge: 'エッジ',
+    btnFit: '全体表示', btnView: 'ビュー', btnWire: 'ワイヤー', btnEdge: 'エッジ', btnAxis: '座標軸',
     btnFace: '面を選ぶ', btnClip: '断面', btnParts: '部品',
     btnShot: 'PNG', btnCopyImg: 'コピー', btnGuide: '使い方',
     viewTitle: 'ビュー',
@@ -529,7 +530,7 @@ const I18N = {
     partsTitle: 'Parts Tree',
     showAll: 'Show All', makeTransparent: 'Transparent',
     explode: 'Explode',
-    btnFit: 'Fit', btnView: 'View', btnWire: 'Wire', btnEdge: 'Edge',
+    btnFit: 'Fit', btnView: 'View', btnWire: 'Wire', btnEdge: 'Edge', btnAxis: 'Axes',
     btnFace: 'Select Face', btnClip: 'Section', btnParts: 'Parts',
     btnShot: 'PNG', btnCopyImg: 'Copy', btnGuide: 'Help',
     viewTitle: 'View',
@@ -575,7 +576,7 @@ const I18N = {
     partsTitle: '零件树',
     showAll: '全部显示', makeTransparent: '半透明',
     explode: '简易分解',
-    btnFit: '适合视图', btnView: '视图', btnWire: '线框', btnEdge: '边线',
+    btnFit: '适合视图', btnView: '视图', btnWire: '线框', btnEdge: '边线', btnAxis: '坐标轴',
     btnFace: '选择面', btnClip: '截面', btnParts: '零件',
     btnShot: 'PNG', btnCopyImg: '复制', btnGuide: '帮助',
     viewTitle: '视图',
@@ -621,7 +622,7 @@ const I18N = {
     partsTitle: 'รายการชิ้นส่วน',
     showAll: 'แสดงทั้งหมด', makeTransparent: 'โปร่งแสง',
     explode: 'แยกชิ้นส่วน',
-    btnFit: 'พอดีหน้าจอ', btnView: 'มุมมอง', btnWire: 'ไวร์เฟรม', btnEdge: 'ขอบ',
+    btnFit: 'พอดีหน้าจอ', btnView: 'มุมมอง', btnWire: 'ไวร์เฟรม', btnEdge: 'ขอบ', btnAxis: 'แกน',
     btnFace: 'เลือกหน้า', btnClip: 'หน้าตัด', btnParts: 'ชิ้นส่วน',
     btnShot: 'PNG', btnCopyImg: 'คัดลอก', btnGuide: 'ช่วยเหลือ',
     viewTitle: 'มุมมอง',
@@ -667,7 +668,7 @@ const I18N = {
     partsTitle: 'Pohon Suku Cadang',
     showAll: 'Tampilkan Semua', makeTransparent: 'Transparan',
     explode: 'Pecah',
-    btnFit: 'Sesuaikan', btnView: 'Tampilan', btnWire: 'Wireframe', btnEdge: 'Tepi',
+    btnFit: 'Sesuaikan', btnView: 'Tampilan', btnWire: 'Wireframe', btnEdge: 'Tepi', btnAxis: 'Sumbu',
     btnFace: 'Pilih Wajah', btnClip: 'Penampang', btnParts: 'Suku Cadang',
     btnShot: 'PNG', btnCopyImg: 'Salin', btnGuide: 'Bantuan',
     viewTitle: 'Tampilan',
@@ -885,6 +886,7 @@ $('theme-btn').addEventListener('click',()=>{ isDark=!isDark; applyTheme(); });
 
 let occt=null, modelGroup=null, faceObjects=[], meshParts=[], selectedFaces=[], wireframe=false, faceMode=false, distanceLine=null, currentStyle='matte';
 let explodeAmount=0, explodeScale=1, edgesVisible=false;
+let axisVisible = localStorage.getItem('stp_axis') !== '0';
 const edgeMat=new THREE.LineBasicMaterial({color:0x2a3040});
 
 function addEdges(mesh,geo){
@@ -1323,6 +1325,7 @@ async function loadSTP(buffer,filename){
     worldAxis = buildWorldAxis(axisSize);
     worldAxis.position.copy(box.min);
     scene.add(worldAxis);
+    worldAxis.visible=axisVisible;
 
     ['x','y','z'].forEach((ax,i)=>{
       $(`clip-${ax}`).value=0;
@@ -1511,6 +1514,14 @@ $('btn-edge').addEventListener('click',()=>{
   edgesVisible=!edgesVisible;
   $('btn-edge').classList.toggle('active',edgesVisible);
   modelGroup.traverse(o=>{if(o.userData.isEdge)o.visible=edgesVisible;});
+});
+
+$('btn-axis').classList.toggle('active',axisVisible);
+$('btn-axis').addEventListener('click',()=>{
+  axisVisible=!axisVisible;
+  $('btn-axis').classList.toggle('active',axisVisible);
+  if(worldAxis)worldAxis.visible=axisVisible;
+  localStorage.setItem('stp_axis',axisVisible?'1':'0');
 });
 
 const CUBE_FACES={
