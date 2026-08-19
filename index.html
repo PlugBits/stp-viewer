@@ -744,6 +744,55 @@ orbitControls.mouseButtons = {
 const normalMouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
 const faceModeMouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
 
+/* 自由回転(トラックボール式)。OrbitControls の回転は極角が 0〜180° に
+   クランプされ真上・真下を越えられないため、回転のみ自前で処理する。
+   ズーム/パン(修飾キー押下時含む)は引き続き OrbitControls が担当する。 */
+orbitControls.enableRotate = false;
+const freeRot = { dragging:false, pointerId:null, x:0, y:0, vx:0, vy:0, lastMove:0 };
+const _rotOffset = new THREE.Vector3(), _rotRight = new THREE.Vector3();
+const _rotQ = new THREE.Quaternion(), _rotQ2 = new THREE.Quaternion();
+function applyFreeRotation(dx, dy){
+  const h = canvas.clientHeight || 1;
+  _rotOffset.copy(camera.position).sub(orbitControls.target);
+  _rotRight.set(1,0,0).applyQuaternion(camera.quaternion);
+  _rotQ.setFromAxisAngle(camera.up, -2*Math.PI*dx/h)
+       .multiply(_rotQ2.setFromAxisAngle(_rotRight, -2*Math.PI*dy/h));
+  _rotOffset.applyQuaternion(_rotQ);
+  camera.up.applyQuaternion(_rotQ).normalize();
+  camera.position.copy(orbitControls.target).add(_rotOffset);
+  camera.lookAt(orbitControls.target);
+}
+function stopFreeRotation(){ freeRot.dragging=false; freeRot.pointerId=null; freeRot.vx=0; freeRot.vy=0; }
+const rotPointers = new Set();
+canvas.addEventListener('pointerdown', e=>{
+  rotPointers.add(e.pointerId);
+  try{ canvas.setPointerCapture(e.pointerId); }catch(_){}
+  if(rotPointers.size>1){ freeRot.dragging=false; freeRot.pointerId=null; return; }
+  if(e.pointerType!=='touch'){
+    const rotateButton = faceMode ? 2 : 0;
+    if(e.button!==rotateButton || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  }
+  freeRot.dragging=true; freeRot.pointerId=e.pointerId;
+  freeRot.x=e.clientX; freeRot.y=e.clientY; freeRot.vx=0; freeRot.vy=0;
+});
+canvas.addEventListener('pointermove', e=>{
+  if(!freeRot.dragging || e.pointerId!==freeRot.pointerId) return;
+  const dx=e.clientX-freeRot.x, dy=e.clientY-freeRot.y;
+  freeRot.x=e.clientX; freeRot.y=e.clientY;
+  applyFreeRotation(dx,dy);
+  freeRot.vx=freeRot.vx*0.6+dx*0.4; freeRot.vy=freeRot.vy*0.6+dy*0.4;
+  freeRot.lastMove=performance.now();
+});
+const endRotPointer = e=>{
+  rotPointers.delete(e.pointerId);
+  if(freeRot.dragging && e.pointerId===freeRot.pointerId){
+    freeRot.dragging=false; freeRot.pointerId=null;
+    if(performance.now()-freeRot.lastMove>80){ freeRot.vx=0; freeRot.vy=0; }
+  }
+};
+canvas.addEventListener('pointerup', endRotPointer);
+canvas.addEventListener('pointercancel', endRotPointer);
+
 scene.add(new THREE.AmbientLight(0xffffff,0.55));
 const d1 = new THREE.DirectionalLight(0xffffff,0.85); d1.position.set(5,10,7); scene.add(d1);
 const d2 = new THREE.DirectionalLight(0x8fb4e8,0.35); d2.position.set(-5,-3,-5); scene.add(d2);
@@ -826,6 +875,10 @@ $('theme-btn').addEventListener('click',()=>{ isDark=!isDark; applyTheme(); });
 
 (function animate(){
   requestAnimationFrame(animate);
+  if(!freeRot.dragging && (Math.abs(freeRot.vx)>0.05 || Math.abs(freeRot.vy)>0.05)){
+    applyFreeRotation(freeRot.vx, freeRot.vy);
+    freeRot.vx*=0.94; freeRot.vy*=0.94;
+  }
   orbitControls.update();
   renderer.render(scene,camera);
 })();
@@ -1259,6 +1312,8 @@ async function loadSTP(buffer,filename){
     $('explode-range').value=0;
     applyExplode();
     const dist=(maxDim/2)/Math.tan((camera.fov/2)*Math.PI/180)*1.4;
+    stopFreeRotation();
+    camera.up.set(0,1,0);
     orbitControls.target.copy(center);
     camera.position.copy(center).add(new THREE.Vector3(dist,dist*0.6,dist));
     camera.lookAt(center);orbitControls.update();
@@ -1438,6 +1493,7 @@ $('btn-fit').addEventListener('click',()=>{
   const center=box.getCenter(new THREE.Vector3());
   const size=box.getSize(new THREE.Vector3());
   const dist=(Math.max(size.x,size.y,size.z)/2)/Math.tan((camera.fov/2)*Math.PI/180)*2.2;
+  stopFreeRotation();
   orbitControls.target.copy(center);
   camera.position.copy(center).add(new THREE.Vector3(dist,dist*0.6,dist));
   camera.lookAt(center);orbitControls.update();
@@ -1510,6 +1566,7 @@ function setViewDir(dir){
   const dist=(maxDim/2)/Math.tan((camera.fov/2)*Math.PI/180)*2.2;
   const up=new THREE.Vector3(0,1,0);
   if(Math.abs(dir.dot(up))>0.95) up.set(0,0,dir.y>0?-1:1);
+  stopFreeRotation();
   orbitControls.target.copy(center);
   camera.up.copy(up);
   camera.position.copy(center).addScaledVector(dir,dist);
