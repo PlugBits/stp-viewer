@@ -539,6 +539,7 @@ const I18N = {
     faceLabel: '面', centroidX: '重心 X', centroidY: '重心 Y', centroidZ: '重心 Z',
     refRadius: '参考半径', refDiameter: '参考直径',
     distTitle: '重心間距離（参考）', distStraight: '直線距離',
+    centerX: '中心(軸上) X', centerY: '中心(軸上) Y', centerZ: '中心(軸上) Z', distTitleCenter: '中心間距離（参考）', distTitleMixed: '中心・重心間距離（参考）',
     viewTop: '上', viewBottom: '下', viewLeft: '左', viewRight: '右',
     viewFront: '正面', viewBack: '背面', viewIso: '等角',
   },
@@ -586,6 +587,7 @@ const I18N = {
     faceLabel: 'Face', centroidX: 'Centroid X', centroidY: 'Centroid Y', centroidZ: 'Centroid Z',
     refRadius: 'Ref. radius', refDiameter: 'Ref. diameter',
     distTitle: 'Centroid distance (ref.)', distStraight: 'Straight dist.',
+    centerX: 'Center (on axis) X', centerY: 'Center (on axis) Y', centerZ: 'Center (on axis) Z', distTitleCenter: 'Center distance (ref.)', distTitleMixed: 'Center/centroid distance (ref.)',
     viewTop: 'Top', viewBottom: 'Bottom', viewLeft: 'Left', viewRight: 'Right',
     viewFront: 'Front', viewBack: 'Back', viewIso: 'Iso',
   },
@@ -633,6 +635,7 @@ const I18N = {
     faceLabel: '面', centroidX: '重心 X', centroidY: '重心 Y', centroidZ: '重心 Z',
     refRadius: '参考半径', refDiameter: '参考直径',
     distTitle: '重心间距离（参考）', distStraight: '直线距离',
+    centerX: '中心(轴上) X', centerY: '中心(轴上) Y', centerZ: '中心(轴上) Z', distTitleCenter: '中心间距离（参考）', distTitleMixed: '中心·重心间距离（参考）',
     viewTop: '上', viewBottom: '下', viewLeft: '左', viewRight: '右',
     viewFront: '正面', viewBack: '背面', viewIso: '等轴',
   },
@@ -677,9 +680,10 @@ const I18N = {
     statusCopied: 'คัดลอกแล้ว',
     noPartsInfo: 'ไม่มีข้อมูลชิ้นส่วน',
     faceTypeCyl: 'เมชทรงกระบอก (ประมาณ)', faceTypeMesh: 'หน้าเมช',
-    faceLabel: 'หน้า', centroidX: 'จุดศูนย์กลาง X', centroidY: 'จุดศูนย์กลาง Y', centroidZ: 'จุดศูนย์กลาง Z',
+    faceLabel: 'หน้า', centroidX: 'เซนทรอยด์ X', centroidY: 'เซนทรอยด์ Y', centroidZ: 'เซนทรอยด์ Z',
     refRadius: 'รัศมีอ้างอิง', refDiameter: 'เส้นผ่าศูนย์กลางอ้างอิง',
-    distTitle: 'ระยะจุดศูนย์กลาง (อ้างอิง)', distStraight: 'ระยะตรง',
+    distTitle: 'ระยะเซนทรอยด์ (อ้างอิง)', distStraight: 'ระยะตรง',
+    centerX: 'จุดศูนย์กลาง (บนแกน) X', centerY: 'จุดศูนย์กลาง (บนแกน) Y', centerZ: 'จุดศูนย์กลาง (บนแกน) Z', distTitleCenter: 'ระยะระหว่างจุดศูนย์กลาง (อ้างอิง)', distTitleMixed: 'ระยะจุดศูนย์กลาง/เซนทรอยด์ (อ้างอิง)',
     viewTop: 'บน', viewBottom: 'ล่าง', viewLeft: 'ซ้าย', viewRight: 'ขวา',
     viewFront: 'หน้า', viewBack: 'หลัง', viewIso: 'ไอโซ',
   },
@@ -727,6 +731,7 @@ const I18N = {
     faceLabel: 'Wajah', centroidX: 'Sentroid X', centroidY: 'Sentroid Y', centroidZ: 'Sentroid Z',
     refRadius: 'Radius ref.', refDiameter: 'Diameter ref.',
     distTitle: 'Jarak sentroid (ref.)', distStraight: 'Jarak lurus',
+    centerX: 'Pusat (pada sumbu) X', centerY: 'Pusat (pada sumbu) Y', centerZ: 'Pusat (pada sumbu) Z', distTitleCenter: 'Jarak pusat (ref.)', distTitleMixed: 'Jarak pusat/sentroid (ref.)',
     viewTop: 'Atas', viewBottom: 'Bawah', viewLeft: 'Kiri', viewRight: 'Kanan',
     viewFront: 'Depan', viewBack: 'Belakang', viewIso: 'Iso',
   },
@@ -1033,6 +1038,50 @@ function faceWorldCentroid(fo){
   return fo.centroid.clone().add(offset);
 }
 
+// 測りの基準点: 軸が求まった円筒は軸上の中心、それ以外は重心
+function faceIsCenter(fo){return !!(fo.cylInfo&&fo.cylInfo.center);}
+function faceRefPoint(fo){
+  if(!faceIsCenter(fo))return faceWorldCentroid(fo);
+  const offset=fo.mesh?.position||new THREE.Vector3();
+  return fo.cylInfo.center.clone().add(offset);
+}
+
+let measureMarkers=[];
+function clearMeasureMarkers(){
+  measureMarkers.forEach(g=>{
+    scene.remove(g);
+    g.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();});
+  });
+  measureMarkers=[];
+}
+function updateMeasureMarkers(){
+  clearMeasureMarkers();
+  if(!modelGroup)return;
+  const size=new THREE.Box3().setFromObject(modelGroup).getSize(new THREE.Vector3());
+  const maxDim=Math.max(size.x,size.y,size.z)||1;
+  const r=maxDim*0.008,L=maxDim*0.04;
+  selectedFaces.forEach((fo,idx)=>{
+    const p=faceRefPoint(fo);
+    const col=SEL_COLORS[idx];
+    const g=new THREE.Group();
+    g.position.copy(p);
+    g.renderOrder=999;
+    // 外側に暗い縁・内側に選択色(暗い/明るい背景の両方で見える)
+    [[r*1.5,0x101418],[r,col]].forEach(([rad,c],k)=>{
+      const m=new THREE.Mesh(new THREE.SphereGeometry(rad,16,12),new THREE.MeshBasicMaterial({color:c,depthTest:false,depthWrite:false,transparent:true}));
+      m.renderOrder=1000+k;g.add(m);
+    });
+    [[0x101418,1],[col,0]].forEach(([c,k])=>{
+      const pts=[-L,0,0,L,0,0,0,-L,0,0,L,0,0,0,-L,0,0,L].map(v=>v);
+      const geo=new THREE.BufferGeometry();
+      geo.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+      const ln=new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:c,depthTest:false,depthWrite:false,transparent:true}));
+      ln.renderOrder=1002+k;g.add(ln);
+    });
+    scene.add(g);measureMarkers.push(g);
+  });
+}
+
 function renderPartsPanel(){
   const list=$('parts-list');
   if(!list)return;
@@ -1077,18 +1126,19 @@ function formatSelectionText(){
   if(selectedFaces.length===0)return '';
   const lines=['STP Viewer selection'];
   selectedFaces.forEach((fo,idx)=>{
-    const wc=faceWorldCentroid(fo);
+    const wc=faceRefPoint(fo);
     lines.push(`Face ${idx+1}`);
     lines.push(`  type: ${fo.faceType==='cylindrical'?'estimated cylindrical mesh':'mesh face'}`);
-    lines.push(`  centroid: X ${wc.x.toFixed(3)}, Y ${wc.y.toFixed(3)}, Z ${wc.z.toFixed(3)} mm`);
+    lines.push(`  ${faceIsCenter(fo)?'center (on axis)':'centroid'}: X ${wc.x.toFixed(3)}, Y ${wc.y.toFixed(3)}, Z ${wc.z.toFixed(3)} mm`);
     if(fo.cylInfo?.radius){
       lines.push(`  reference radius: ${fo.cylInfo.radius.toFixed(3)} mm`);
       lines.push(`  reference diameter: ${(fo.cylInfo.radius*2).toFixed(3)} mm`);
     }
   });
   if(selectedFaces.length===2){
-    const ca=faceWorldCentroid(selectedFaces[0]),cb=faceWorldCentroid(selectedFaces[1]);
-    lines.push('Centroid distance');
+    const ca=faceRefPoint(selectedFaces[0]),cb=faceRefPoint(selectedFaces[1]);
+    const nc=selectedFaces.filter(faceIsCenter).length;
+    lines.push(nc===2?'Center distance':nc===0?'Centroid distance':'Center/centroid distance');
     lines.push(`  dX ${Math.abs(cb.x-ca.x).toFixed(3)} mm`);
     lines.push(`  dY ${Math.abs(cb.y-ca.y).toFixed(3)} mm`);
     lines.push(`  dZ ${Math.abs(cb.z-ca.z).toFixed(3)} mm`);
@@ -1277,7 +1327,15 @@ function classifyFace(positions,normal,normals){
       }
       const circle=fitCircle2d(pts);
       if(circle&&circle.cv<0.08){
-        return{type:'cylindrical',radius:circle.radius,cv:circle.cv,axis};
+        // 軸方向の範囲の中央 + 円の中心(u,v)を3次元に戻す
+        let tmin=Infinity,tmax=-Infinity;
+        for(let i=0;i<positions.length;i+=3){
+          const tt=positions[i]*axis.x+positions[i+1]*axis.y+positions[i+2]*axis.z;
+          if(tt<tmin)tmin=tt;if(tt>tmax)tmax=tt;
+        }
+        const center=new THREE.Vector3()
+          .addScaledVector(u,circle.cx).addScaledVector(v,circle.cy).addScaledVector(axis,(tmin+tmax)/2);
+        return{type:'cylindrical',radius:circle.radius,cv:circle.cv,axis,center};
       }
     }
   }
@@ -1328,7 +1386,7 @@ async function loadSTP(buffer,filename){
 
     if(modelGroup)scene.remove(modelGroup);
     faceObjects.forEach(fo=>{if(fo.normalArrow)scene.remove(fo.normalArrow);});
-    faceObjects=[];meshParts=[];selectedFaces=[];modelGroup=new THREE.Group();wireframe=false;explodeAmount=0;
+    faceObjects=[];meshParts=[];selectedFaces=[];clearMeasureMarkers();modelGroup=new THREE.Group();wireframe=false;explodeAmount=0;
     if(distanceLine){scene.remove(distanceLine);distanceLine=null;}
 
     let totalFaces=0;
@@ -1460,19 +1518,21 @@ function deselectFace(fo){
 
 function updateSelectionPanel(){
   const panel=$('sel-panel'),content=$('sel-content');
-  if(selectedFaces.length===0){panel.style.display='none';return;}
+  if(selectedFaces.length===0){panel.style.display='none';clearMeasureMarkers();return;}
   panel.style.display='block';
+  updateMeasureMarkers();
   let html='';
   selectedFaces.forEach((fo,idx)=>{
     const color='#'+SEL_COLORS[idx].toString(16).padStart(6,'0');
     const type=fo.faceType==='cylindrical'?t('faceTypeCyl'):t('faceTypeMesh');
-    const wc=faceWorldCentroid(fo);
+    const wc=faceRefPoint(fo);
+    const isC=faceIsCenter(fo);
     const cx=wc.x.toFixed(3),cy=wc.y.toFixed(3),cz=wc.z.toFixed(3);
     html+=`<div style="margin-bottom:8px">
       <div style="margin-bottom:3px"><span class="sel-badge" style="background:${color}"></span><b>${t('faceLabel')} ${idx+1}</b> (${type})</div>
-      <div class="sel-row"><span>${t('centroidX')}</span><span class="sel-val">${cx}</span></div>
-      <div class="sel-row"><span>${t('centroidY')}</span><span class="sel-val">${cy}</span></div>
-      <div class="sel-row"><span>${t('centroidZ')}</span><span class="sel-val">${cz}</span></div>
+      <div class="sel-row"><span>${t(isC?'centerX':'centroidX')}</span><span class="sel-val">${cx}</span></div>
+      <div class="sel-row"><span>${t(isC?'centerY':'centroidY')}</span><span class="sel-val">${cy}</span></div>
+      <div class="sel-row"><span>${t(isC?'centerZ':'centroidZ')}</span><span class="sel-val">${cz}</span></div>
       ${fo.cylInfo?.radius?`
       <div class="sel-row"><span>${t('refRadius')}</span><span class="sel-val">${fo.cylInfo.radius.toFixed(3)} mm</span></div>
       <div class="sel-row"><span>${t('refDiameter')}</span><span class="sel-val">${(fo.cylInfo.radius*2).toFixed(3)} mm</span></div>`:''}
@@ -1480,14 +1540,16 @@ function updateSelectionPanel(){
   });
   html+=estSelHtml();
   if(selectedFaces.length===2){
-    const ca=faceWorldCentroid(selectedFaces[0]),cb=faceWorldCentroid(selectedFaces[1]);
+    const ca=faceRefPoint(selectedFaces[0]),cb=faceRefPoint(selectedFaces[1]);
+    const nCenter=selectedFaces.filter(faceIsCenter).length;
+    const distTitleKey=nCenter===2?'distTitleCenter':nCenter===0?'distTitle':'distTitleMixed';
     const dx=Math.abs(cb.x-ca.x),dy=Math.abs(cb.y-ca.y),dz=Math.abs(cb.z-ca.z),dist=ca.distanceTo(cb);
     if(distanceLine)scene.remove(distanceLine);
     const geo=new THREE.BufferGeometry().setFromPoints([ca,cb]);
     distanceLine=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0xffffff}));
     scene.add(distanceLine);
     html+=`<hr class="div">
-    <div style="margin-bottom:4px;font-weight:600;color:var(--text2)">${t('distTitle')}</div>
+    <div style="margin-bottom:4px;font-weight:600;color:var(--text2)">${t(distTitleKey)}</div>
     <div class="sel-row"><span>ΔX</span><span class="sel-val">${dx.toFixed(3)} mm</span></div>
     <div class="sel-row"><span>ΔY</span><span class="sel-val">${dy.toFixed(3)} mm</span></div>
     <div class="sel-row"><span>ΔZ</span><span class="sel-val">${dz.toFixed(3)} mm</span></div>
