@@ -495,7 +495,7 @@ const I18N = {
     partVisTip: '表示/非表示', partTransTip: '半透明',
     statusInit: '初期化中...', statusReady: '準備完了', statusInitFail: '初期化失敗',
     statusNotInit: '未初期化', statusParsing: 'STPを解析中...', statusLoading: '読み込み中',
-    statusNoMesh: 'メッシュが見つかりません', statusDone: '表示完了',
+    statusNoMesh: 'メッシュが見つかりません', statusDone: '表示完了', usageNote: '使われ方の回数(開いた数・使った機能)だけを数えています。ファイルの内容や名前は送りません',
     statusNoCopy: 'コピー非対応', statusImgCopied: '画像をコピーしました', statusCopyFail: 'コピーできません',
     statusCopied: 'コピーしました',
     noPartsInfo: '部品情報はありません。',
@@ -541,7 +541,7 @@ const I18N = {
     partVisTip: 'Show/Hide', partTransTip: 'Transparent',
     statusInit: 'Initializing...', statusReady: 'Ready', statusInitFail: 'Init failed',
     statusNotInit: 'Not initialized', statusParsing: 'Parsing STP...', statusLoading: 'Loading',
-    statusNoMesh: 'No mesh found', statusDone: 'Loaded',
+    statusNoMesh: 'No mesh found', statusDone: 'Loaded', usageNote: 'We only count usage (files opened, features used). File contents and names are never sent.',
     statusNoCopy: 'Copy not supported', statusImgCopied: 'Image copied', statusCopyFail: 'Copy failed',
     statusCopied: 'Copied',
     noPartsInfo: 'No part information.',
@@ -587,7 +587,7 @@ const I18N = {
     partVisTip: '显示/隐藏', partTransTip: '半透明',
     statusInit: '初始化中...', statusReady: '就绪', statusInitFail: '初始化失败',
     statusNotInit: '未初始化', statusParsing: '解析STP中...', statusLoading: '加载中',
-    statusNoMesh: '未找到网格', statusDone: '加载完成',
+    statusNoMesh: '未找到网格', statusDone: '加载完成', usageNote: '仅统计使用次数(打开数、使用的功能)。不会发送文件内容或文件名。',
     statusNoCopy: '不支持复制', statusImgCopied: '图像已复制', statusCopyFail: '复制失败',
     statusCopied: '已复制',
     noPartsInfo: '无零件信息。',
@@ -633,7 +633,7 @@ const I18N = {
     partVisTip: 'แสดง/ซ่อน', partTransTip: 'โปร่งแสง',
     statusInit: 'กำลังเริ่มต้น...', statusReady: 'พร้อม', statusInitFail: 'เริ่มต้นล้มเหลว',
     statusNotInit: 'ยังไม่เริ่มต้น', statusParsing: 'กำลังแยก STP...', statusLoading: 'กำลังโหลด',
-    statusNoMesh: 'ไม่พบเมช', statusDone: 'โหลดแล้ว',
+    statusNoMesh: 'ไม่พบเมช', statusDone: 'โหลดแล้ว', usageNote: 'นับเฉพาะจำนวนการใช้งาน (จำนวนไฟล์ที่เปิด ฟีเจอร์ที่ใช้) ไม่ส่งเนื้อหาหรือชื่อไฟล์',
     statusNoCopy: 'ไม่รองรับการคัดลอก', statusImgCopied: 'คัดลอกภาพแล้ว', statusCopyFail: 'คัดลอกล้มเหลว',
     statusCopied: 'คัดลอกแล้ว',
     noPartsInfo: 'ไม่มีข้อมูลชิ้นส่วน',
@@ -679,7 +679,7 @@ const I18N = {
     partVisTip: 'Tampilkan/Sembunyikan', partTransTip: 'Transparan',
     statusInit: 'Menginisialisasi...', statusReady: 'Siap', statusInitFail: 'Inisialisasi gagal',
     statusNotInit: 'Belum diinisialisasi', statusParsing: 'Mengurai STP...', statusLoading: 'Memuat',
-    statusNoMesh: 'Mesh tidak ditemukan', statusDone: 'Dimuat',
+    statusNoMesh: 'Mesh tidak ditemukan', statusDone: 'Dimuat', usageNote: 'Kami hanya menghitung penggunaan (file dibuka, fitur dipakai). Isi dan nama file tidak pernah dikirim.',
     statusNoCopy: 'Salin tidak didukung', statusImgCopied: 'Gambar disalin', statusCopyFail: 'Salin gagal',
     statusCopied: 'Disalin',
     noPartsInfo: 'Tidak ada informasi suku cadang.',
@@ -718,6 +718,7 @@ function setLanguage(lang) {
   if (!I18N[lang]) return;
   currentLang = lang;
   localStorage.setItem('stp_lang', lang);
+  usageMark('lang_switch');
   applyI18n();
 }
 
@@ -1346,10 +1347,13 @@ async function loadSTP(buffer,filename){
     $('filename').textContent=filename;
     setStatus('ready',t('statusDone'));
 
+    usageOpened(buffer.byteLength,result.meshes.length);
+
     if(!localStorage.getItem('stp-guide-shown')){
       $('guide').classList.remove('hidden');
     }
   }catch(e){
+    usageMark('open_fail',true);
     setStatus('error',e.message);console.error(e);
     $('dropzone').classList.remove('hidden');
   }
@@ -1376,6 +1380,7 @@ mainEl.addEventListener('drop',e=>{
 const raycaster=new THREE.Raycaster();
 
 function selectFace(fo,selIdx){
+  usageMark('f_measure');
   const color=SEL_COLORS[selIdx];
   fo.mesh.material=new THREE.MeshStandardMaterial({
     color,roughness:0.4,metalness:0.1,side:THREE.DoubleSide,
@@ -1652,12 +1657,60 @@ document.addEventListener('keydown',e=>{
   }
 });
 
+/* ── 使われ方の回数(区分と回数だけ。ファイルの中身・名前・寸法は送らない) ── */
+const USAGE_URL='https://stp-api.plugbits.app/c';
+const usage={sent:new Set(),files:0,firstOpen:0,done:false};
+function usageSend(keys){
+  try{
+    const body=JSON.stringify({e:keys});
+    if(navigator.sendBeacon&&navigator.sendBeacon(USAGE_URL,new Blob([body],{type:'text/plain'})))return;
+    fetch(USAGE_URL,{method:'POST',body,keepalive:true,mode:'cors',credentials:'omit',headers:{'Content-Type':'text/plain'}}).catch(()=>{});
+  }catch(_){}
+}
+function usageMark(k,every){
+  try{ if(!every){ if(usage.sent.has(k))return; usage.sent.add(k); } usageSend([k]); }catch(_){}
+}
+function usageOpened(bytes,parts){
+  try{
+    usage.files++; if(!usage.firstOpen)usage.firstOpen=Date.now();
+    const mb=bytes/1048576;
+    const size=mb<=1?'size_1m':mb<=10?'size_10m':mb<=50?'size_50m':'size_over';
+    const pc=parts<=1?'parts_1':parts<=10?'parts_10':parts<=100?'parts_100':'parts_over';
+    usageSend(['open_ok',size,pc]);
+  }catch(_){}
+}
+function usageLeave(){
+  try{
+    if(usage.done)return; usage.done=true;
+    const f=usage.files, keys=[f===0?'files_0':f===1?'files_1':f===2?'files_2':'files_3plus','lang_'+currentLang];
+    if(usage.firstOpen){
+      const s=(Date.now()-usage.firstOpen)/1000;
+      keys.push(s<=30?'stay_30s':s<=180?'stay_3m':s<=600?'stay_10m':'stay_over');
+    }
+    usageSend(keys);
+  }catch(_){}
+}
+try{
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden')usageLeave(); });
+  window.addEventListener('pagehide',usageLeave);
+  ['x','y','z'].forEach(ax=>$(`clip-${ax}-on`).addEventListener('change',e=>{ if(e.target.checked)usageMark('f_clip'); }));
+  ['parts-list','show-all-parts','trans-all-parts'].forEach(id=>$(id).addEventListener('click',()=>usageMark('f_parts')));
+  $('explode-range').addEventListener('input',()=>usageMark('f_parts'));
+  $('view-grid').addEventListener('click',()=>usageMark('f_view'));
+  ['btn-wire','btn-edge','matte-swatches','solid-swatches'].forEach(id=>$(id).addEventListener('click',()=>usageMark('f_style')));
+  document.querySelectorAll('#style-sw [data-style]').forEach(b=>b.addEventListener('click',()=>usageMark('f_style')));
+  ['copy-sel','btn-copyimg'].forEach(id=>$(id).addEventListener('click',()=>usageMark('f_copy')));
+  $('btn-shot').addEventListener('click',()=>usageMark('f_shot'));
+  usageMark('visit');
+}catch(_){}
+
 applyI18n();
 initOcct();
 </script>
-<footer style="flex-shrink:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 12px;font-size:11px;line-height:1.3;opacity:.7;text-align:center;background:var(--bg2);border-top:1px solid var(--border)">
+<footer style="flex-shrink:0;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;padding:5px 12px;font-size:11px;line-height:1.3;opacity:.7;text-align:center;background:var(--bg2);border-top:1px solid var(--border)">
   <span>PlugBits製</span><span>｜</span>
   <a href="https://plugbits.app/factory-tools/" style="color:inherit">他の無料ツールを見る → plugbits.app/factory-tools</a>
+  <span>｜</span><span data-i18n="usageNote">使われ方の回数(開いた数・使った機能)だけを数えています。ファイルの内容や名前は送りません</span>
 </footer>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "86511d1154774394986239de33d21882"}'></script>
 </body>
