@@ -175,6 +175,17 @@ main { flex:1; position:relative; overflow:hidden; }
 }
 .info-panel b { color:var(--text2); }
 
+/* Estimate (volume / weight) */
+#est-panel { bottom:76px;left:auto;right:12px;min-width:200px; }
+.est-box { line-height:1.7; }
+.est-row { display:flex;align-items:center;gap:6px;margin-bottom:3px; }
+.est-row select,.est-row input { background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text2);font-size:11px;padding:2px 4px;min-width:0; }
+.est-row select { flex:1 1 auto;max-width:170px; }
+.est-row input { width:58px; }
+.est-sub { color:var(--text3);font-size:10px;line-height:1.5; }
+.est-val { color:var(--text);font-variant-numeric:tabular-nums;font-weight:500; }
+.part-wt { display:block;font-size:10px;color:var(--text3);font-variant-numeric:tabular-nums; }
+
 /* Selection panel */
 #sel-panel {
   position:absolute; top:12px; right:12px;
@@ -318,6 +329,9 @@ body { height: 100dvh; }
   .info-panel { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); left: 12px; }
   .hint       { bottom: calc(62px + env(safe-area-inset-bottom, 0px)); }
 }
+@media (max-width: 480px) {
+  #est-panel { left: 92px; right: auto; bottom: calc(138px + env(safe-area-inset-bottom, 0px)); }
+}
 </style>
 </head>
 <body class="light">
@@ -368,6 +382,26 @@ body { height: 100dvh; }
   <div class="info-panel" id="info">
     <div><b data-i18n="infoFile">ファイル:</b> <span id="i-file">-</span></div>
     <div><b data-i18n="infoFaces">面数:</b> <span id="i-face">-</span></div>
+    <div><b data-i18n="infoParts">部品:</b> <span id="i-parts">-</span></div>
+  </div>
+  <div class="info-panel" id="est-panel">
+    <div class="est-box" id="est-box">
+      <div class="est-row"><b data-i18n="matLabel">材質:</b>
+        <select id="mat-sel">
+          <option value="" data-i18n="matNone">選択してください</option>
+          <option value="7.85" data-i18n="matFe">鉄 SS400</option>
+          <option value="7.93" data-i18n="matSus">ステンレス SUS304</option>
+          <option value="2.68" data-i18n="matAl">アルミ A5052</option>
+          <option value="8.5" data-i18n="matBrass">真鍮 C3604</option>
+          <option value="1.05" data-i18n="matAbs">樹脂 ABS</option>
+          <option value="custom" data-i18n="matCustom">比重を手入力</option>
+        </select></div>
+      <div class="est-row"><b data-i18n="densLabel">比重:</b>
+        <input type="number" id="mat-sg" min="0" step="0.01" inputmode="decimal"> <span>g/cm³</span></div>
+      <div><b data-i18n="volLabel">体積:</b> <span class="est-val" id="est-vol">-</span></div>
+      <div><b data-i18n="wtLabel">重量:</b> <span class="est-val" id="est-wt">-</span></div>
+      <div class="est-sub" data-i18n="estNote">概算(網目から計算)・単位 mm で計算</div>
+    </div>
   </div>
 
   <div id="sel-panel">
@@ -477,6 +511,7 @@ const I18N = {
     guideFaceExit: '面選択モードを終了',
     guideStart: '始める',
     infoFile: 'ファイル:', infoFaces: '面数:',
+    infoParts: '部品:', partsUnit: '点', matLabel: '材質:', matNone: '選択してください', matFe: '鉄 SS400', matSus: 'ステンレス SUS304', matAl: 'アルミ A5052', matBrass: '真鍮 C3604', matAbs: '樹脂 ABS', matCustom: '比重を手入力', densLabel: '比重:', volLabel: '体積:', wtLabel: '重量:', estNote: '概算(網目から計算)・単位 mm で計算', volBusy: '計算中...', volOpen: 'この部品は閉じていないため体積を出せません', volOpenAll: '閉じていない部品があるため、全体の体積を出せません', partWord: '部品',
     selTitle: '面情報 / 計測',
     selNote: '表示値はメッシュから算出した参考値です。正式な検査寸法にはCAD/図面値を使用してください。',
     btnCopy: 'コピー', btnClear: 'クリア',
@@ -523,6 +558,7 @@ const I18N = {
     guideFaceExit: 'Exit face select mode',
     guideStart: 'Start',
     infoFile: 'File:', infoFaces: 'Faces:',
+    infoParts: 'Parts:', partsUnit: 'pcs', matLabel: 'Material:', matNone: 'Select...', matFe: 'Steel SS400', matSus: 'Stainless SUS304', matAl: 'Aluminum A5052', matBrass: 'Brass C3604', matAbs: 'Plastic ABS', matCustom: 'Enter density', densLabel: 'Density:', volLabel: 'Volume:', wtLabel: 'Weight:', estNote: 'Approximate (from mesh) / computed in mm', volBusy: 'Calculating...', volOpen: 'Volume unavailable: this part is not a closed shape', volOpenAll: 'Total volume unavailable: some parts are not closed shapes', partWord: 'Part',
     selTitle: 'Face Info / Measure',
     selNote: 'Values are reference estimates calculated from the display mesh. Use CAD/drawing values for inspection.',
     btnCopy: 'Copy', btnClear: 'Clear',
@@ -569,6 +605,7 @@ const I18N = {
     guideFaceExit: '退出面选择模式',
     guideStart: '开始',
     infoFile: '文件:', infoFaces: '面数:',
+    infoParts: '零件:', partsUnit: '个', matLabel: '材质:', matNone: '请选择', matFe: '钢 SS400', matSus: '不锈钢 SUS304', matAl: '铝 A5052', matBrass: '黄铜 C3604', matAbs: '塑料 ABS', matCustom: '手动输入比重', densLabel: '比重:', volLabel: '体积:', wtLabel: '重量:', estNote: '概算(由网格计算)・以 mm 为单位计算', volBusy: '计算中...', volOpen: '该零件不是封闭形状,无法计算体积', volOpenAll: '存在非封闭零件,无法计算总体积', partWord: '零件',
     selTitle: '面信息 / 测量',
     selNote: '显示值为从显示网格计算的参考值，请使用CAD/图纸值进行正式检查。',
     btnCopy: '复制', btnClear: '清除',
@@ -615,6 +652,7 @@ const I18N = {
     guideFaceExit: 'ออกจากโหมดเลือกหน้า',
     guideStart: 'เริ่ม',
     infoFile: 'ไฟล์:', infoFaces: 'หน้า:',
+    infoParts: 'ชิ้นส่วน:', partsUnit: 'ชิ้น', matLabel: 'วัสดุ:', matNone: 'เลือกวัสดุ', matFe: 'เหล็ก SS400', matSus: 'สแตนเลส SUS304', matAl: 'อลูมิเนียม A5052', matBrass: 'ทองเหลือง C3604', matAbs: 'พลาสติก ABS', matCustom: 'กรอกความถ่วงจำเพาะ', densLabel: 'ความถ่วงจำเพาะ:', volLabel: 'ปริมาตร:', wtLabel: 'น้ำหนัก:', estNote: 'ค่าประมาณ (คำนวณจากเมช) หน่วย mm', volBusy: 'กำลังคำนวณ...', volOpen: 'ชิ้นส่วนนี้ไม่ปิดสนิท จึงคำนวณปริมาตรไม่ได้', volOpenAll: 'มีชิ้นส่วนที่ไม่ปิดสนิท จึงคำนวณปริมาตรรวมไม่ได้', partWord: 'ชิ้นส่วน',
     selTitle: 'ข้อมูลหน้า / วัด',
     selNote: 'ค่าที่แสดงเป็นค่าอ้างอิงจากเมช กรุณาใช้ค่า CAD/แบบสำหรับการตรวจสอบ',
     btnCopy: 'คัดลอก', btnClear: 'ล้าง',
@@ -661,6 +699,7 @@ const I18N = {
     guideFaceExit: 'Keluar mode pilih wajah',
     guideStart: 'Mulai',
     infoFile: 'File:', infoFaces: 'Wajah:',
+    infoParts: 'Komponen:', partsUnit: 'buah', matLabel: 'Bahan:', matNone: 'Pilih...', matFe: 'Baja SS400', matSus: 'Stainless SUS304', matAl: 'Aluminium A5052', matBrass: 'Kuningan C3604', matAbs: 'Plastik ABS', matCustom: 'Input berat jenis', densLabel: 'Berat jenis:', volLabel: 'Volume:', wtLabel: 'Berat:', estNote: 'Perkiraan (dari mesh) / dihitung dalam mm', volBusy: 'Menghitung...', volOpen: 'Volume tidak dapat dihitung: komponen ini bukan bentuk tertutup', volOpenAll: 'Volume total tidak dapat dihitung: ada komponen yang tidak tertutup', partWord: 'Komponen',
     selTitle: 'Info Wajah / Ukur',
     selNote: 'Nilai yang ditampilkan adalah referensi dari mesh tampilan. Gunakan nilai CAD/gambar untuk inspeksi resmi.',
     btnCopy: 'Salin', btnClear: 'Hapus',
@@ -712,6 +751,7 @@ function applyI18n() {
   document.documentElement.lang = currentLang;
   if (!faceMode) $('hint').textContent = t('hintNormal');
   buildViewGrid();
+  try{ if(est.parts.length){ $('i-parts').textContent=est.parts.length+' '+t('partsUnit'); estRender(); } }catch(_){}
 }
 
 function setLanguage(lang) {
@@ -1002,7 +1042,7 @@ function renderPartsPanel(){
   list.innerHTML=meshParts.map((part,i)=>`
     <div class="part-row">
       <button class="part-btn ${part.visible?'active':''}" data-part-vis="${i}" title="${t('partVisTip')}">${part.visible?'●':'○'}</button>
-      <span class="part-name">${part.name}</span>
+      <span class="part-name">${part.name}${estPartLine(i)}</span>
       <button class="part-btn ${part.transparent?'active':''}" data-part-trans="${i}" title="${t('partTransTip')}">T</button>
     </div>
   `).join('');
@@ -1265,7 +1305,7 @@ async function loadSTP(buffer,filename){
   showOverlay(t('statusParsing'));setStatus('loading',t('statusLoading'));
   await new Promise(r=>setTimeout(r,30));
   try{
-    const result=occt.ReadStepFile(new Uint8Array(buffer),null);
+    const result=occt.ReadStepFile(new Uint8Array(buffer),{linearUnit:'millimeter'});
     if(!result||!result.meshes||result.meshes.length===0)throw new Error(t('statusNoMesh'));
 
     if(modelGroup)scene.remove(modelGroup);
@@ -1338,7 +1378,7 @@ async function loadSTP(buffer,filename){
 
     $('i-file').textContent=filename;
     $('i-face').textContent=totalFaces||'—';
-    $('info').style.display='block';
+    $('info').style.display='block';$('est-panel').style.display='block';
     $('toolbar').style.display='flex';
     $('style-sw').style.display='flex';
     $('parts-file').textContent=filename;
@@ -1348,6 +1388,9 @@ async function loadSTP(buffer,filename){
     setStatus('ready',t('statusDone'));
 
     usageOpened(buffer.byteLength,result.meshes.length);
+    $('i-parts').textContent=result.meshes.length+' '+t('partsUnit');
+    usageMark('f_count');
+    estStart(result.meshes);
 
     if(!localStorage.getItem('stp-guide-shown')){
       $('guide').classList.remove('hidden');
@@ -1416,6 +1459,7 @@ function updateSelectionPanel(){
       <div class="sel-row"><span>${t('refDiameter')}</span><span class="sel-val">${(fo.cylInfo.radius*2).toFixed(3)} mm</span></div>`:''}
     </div>`;
   });
+  html+=estSelHtml();
   if(selectedFaces.length===2){
     const ca=faceWorldCentroid(selectedFaces[0]),cb=faceWorldCentroid(selectedFaces[1]);
     const dx=Math.abs(cb.x-ca.x),dy=Math.abs(cb.y-ca.y),dz=Math.abs(cb.z-ca.z),dist=ca.distanceTo(cb);
@@ -1656,6 +1700,134 @@ document.addEventListener('keydown',e=>{
     $('hint').textContent = t('hintNormal');
   }
 });
+
+/* ── 体積・重量(網目から計算した概算) ── */
+const est={parts:[],total:null,busy:false,token:0,sg:null,weightMarked:false};
+const estTick=()=>new Promise(r=>setTimeout(r,0));
+async function estPartVolume(m,token){
+  const pos=m.attributes.position.array;
+  const nv=pos.length/3;
+  let idx=m.index&&m.index.array;
+  if(!idx){idx=new Uint32Array(nv);for(let i=0;i<nv;i++)idx[i]=i;}
+  const nt=Math.floor(idx.length/3);
+  if(nt===0)return {closed:false,vol:0};
+  let mnx=Infinity,mny=Infinity,mnz=Infinity,mxx=-Infinity,mxy=-Infinity,mxz=-Infinity;
+  for(let i=0;i<pos.length;i+=3){
+    const x=pos[i],y=pos[i+1],z=pos[i+2];
+    if(x<mnx)mnx=x;if(x>mxx)mxx=x;if(y<mny)mny=y;if(y>mxy)mxy=y;if(z<mnz)mnz=z;if(z>mxz)mxz=z;
+  }
+  const diag=Math.hypot(mxx-mnx,mxy-mny,mxz-mnz)||1;
+  const tol=diag*1e-5; // 形の大きさの 0.001%
+  const R=131072;
+  const vid=new Int32Array(nv);const map=new Map();let nid=0;
+  const STEP=60000;
+  for(let i=0;i<nv;i++){
+    const k=(Math.round((pos[i*3]-mnx)/tol)*R+Math.round((pos[i*3+1]-mny)/tol))*R+Math.round((pos[i*3+2]-mnz)/tol);
+    let id=map.get(k);if(id===undefined){id=nid++;map.set(k,id);}
+    vid[i]=id;
+    if(i%STEP===STEP-1){await estTick();if(token!==est.token)return null;}
+  }
+  map.clear();
+  const edges=new Map();
+  const N=nid+1;
+  const add=(a,b)=>{const k=a<b?a*N+b:b*N+a;edges.set(k,(edges.get(k)||0)+1);};
+  let vol6=0;
+  const cx=(mnx+mxx)/2,cy=(mny+mxy)/2,cz=(mnz+mxz)/2;
+  for(let t=0;t<nt;t++){
+    const i0=idx[t*3],i1=idx[t*3+1],i2=idx[t*3+2];
+    const a=vid[i0],b=vid[i1],c=vid[i2];
+    if(a===b||b===c||a===c)continue; // 面積ゼロの三角形
+    add(a,b);add(b,c);add(c,a);
+    const ax=pos[i0*3]-cx,ay=pos[i0*3+1]-cy,az=pos[i0*3+2]-cz;
+    const bx=pos[i1*3]-cx,by=pos[i1*3+1]-cy,bz=pos[i1*3+2]-cz;
+    const qx=pos[i2*3]-cx,qy=pos[i2*3+1]-cy,qz=pos[i2*3+2]-cz;
+    vol6+=ax*(by*qz-bz*qy)-ay*(bx*qz-bz*qx)+az*(bx*qy-by*qx);
+    if(t%STEP===STEP-1){await estTick();if(token!==est.token)return null;}
+  }
+  let closed=edges.size>0;
+  for(const v of edges.values()){if(v!==2){closed=false;break;}}
+  return {closed,vol:Math.abs(vol6)/6};
+}
+async function estStart(meshes){
+  const token=++est.token;
+  est.parts=meshes.map(()=>null);est.total=null;est.busy=true;
+  estRender();
+  try{
+    for(let i=0;i<meshes.length;i++){
+      const r=await estPartVolume(meshes[i],token);
+      if(r===null||token!==est.token)return;
+      est.parts[i]=r;
+      await estTick();
+    }
+    est.total=est.parts.every(p=>p.closed)?est.parts.reduce((s,p)=>s+p.vol,0):false;
+  }catch(e){console.error(e);est.total=false;est.parts=est.parts.map(p=>p||{closed:false,vol:0});}
+  est.busy=false;
+  estRender();
+}
+function estFmtVol(mm3){const v=mm3/1000;return (v>=100?v.toFixed(1):v>=1?v.toFixed(2):v.toFixed(3))+' cm³';}
+function estFmtWt(mm3){
+  if(!est.sg)return null;
+  const g=mm3/1000*est.sg;
+  return g>=1000?(g/1000).toFixed(g>=1000000?1:2)+' kg':(g>=100?g.toFixed(0):g.toFixed(1))+' g';
+}
+function estPartLine(i){
+  const p=est.parts[i];
+  if(!p||!p.closed)return '';
+  const w=estFmtWt(p.vol);
+  return `<span class="part-wt">${estFmtVol(p.vol)}${w?' / '+w:''}</span>`;
+}
+function estSelHtml(){
+  const ids=[...new Set(selectedFaces.map(f=>f.meshIdx).filter(i=>i!==undefined))];
+  if(!ids.length||est.busy&&!ids.every(i=>est.parts[i]))return '';
+  let h='<hr class="div">';
+  ids.forEach(i=>{
+    const p=est.parts[i];if(!p)return;
+    const nm=meshParts[i]?meshParts[i].name:'';
+    h+=`<div style="margin-bottom:4px"><b>${t('partWord')}: ${nm}</b></div>`;
+    if(!p.closed)h+=`<div class="sel-note">${t('volOpen')}</div>`;
+    else{
+      h+=`<div class="sel-row"><span>${t('volLabel').replace(/[:]$/,'')}</span><span class="sel-val">${estFmtVol(p.vol)}</span></div>`;
+      const w=estFmtWt(p.vol);
+      if(w){h+=`<div class="sel-row"><span>${t('wtLabel').replace(/[:]$/,'')}</span><span class="sel-val">${w}</span></div>`;estMarkWeight();}
+    }
+  });
+  return h+`<div class="sel-note">${t('estNote')}</div>`;
+}
+function estMarkWeight(){ if(!est.weightMarked){est.weightMarked=true;usageMark('f_weight');} }
+function estRender(){
+  const v=$('est-vol'),w=$('est-wt');
+  if(est.busy){v.textContent=t('volBusy');w.textContent='-';}
+  else if(est.total===false){v.textContent=t('volOpenAll');w.textContent='-';}
+  else if(est.total===null){v.textContent='-';w.textContent='-';}
+  else{
+    v.textContent=estFmtVol(est.total);
+    const s=estFmtWt(est.total);
+    w.textContent=s||'-';
+    if(s)estMarkWeight();
+  }
+  if(est.parts.length)$('i-parts').textContent=est.parts.length+' '+t('partsUnit');
+  renderPartsPanel();
+  updateSelectionPanel();
+}
+function estSetSg(sg,fromUser){
+  est.sg=(sg>0&&isFinite(sg))?sg:null;
+  if(fromUser)usageMark('f_material');
+  estRender();
+}
+try{
+  $('mat-sel').addEventListener('change',e=>{
+    const v=e.target.value;
+    if(v==='custom'){$('mat-sg').focus();estSetSg(parseFloat($('mat-sg').value),true);return;}
+    $('mat-sg').value=v;
+    estSetSg(v===''?null:parseFloat(v),true);
+  });
+  $('mat-sg').addEventListener('input',e=>{
+    const v=parseFloat(e.target.value);
+    const known=[...$('mat-sel').options].find(o=>o.value&&o.value!=='custom'&&parseFloat(o.value)===v);
+    $('mat-sel').value=known?known.value:'custom';
+    estSetSg(v,true);
+  });
+}catch(_){}
 
 /* ── 使われ方の回数(区分と回数だけ。ファイルの中身・名前・寸法は送らない) ── */
 const USAGE_URL='https://stp-api.plugbits.app/c';
