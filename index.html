@@ -339,7 +339,7 @@ body { height: 100dvh; }
 <header>
   <span class="logo">STP Viewer</span>
   <label class="file-label" for="file-input" id="file-label-btn">＋ <span data-i18n="openFile">ファイルを開く</span></label>
-  <input type="file" id="file-input" accept=".stp,.step,.STP,.STEP">
+  <input type="file" id="file-input" accept=".stp,.step,.igs,.iges,.stl,.STP,.STEP,.IGS,.IGES,.STL">
   <span id="filename" data-i18n="noFile">ファイルを選択してください</span>
   <div class="header-right">
     <div class="status"><div class="dot" id="dot"></div><span id="stxt" data-i18n="statusIdle">待機中</span></div>
@@ -359,7 +359,7 @@ body { height: 100dvh; }
 
   <div class="drop-zone" id="dropzone">
     <div class="drop-icon">◈</div>
-    <p class="drop-title" data-i18n="dropTitle">STP / STEP ファイルをドロップ</p>
+    <p class="drop-title" data-i18n="dropTitle">STEP / IGES / STL ファイルをドロップ</p>
     <p class="drop-sub" data-i18n="dropSub">または上の「ファイルを開く」から選択。ファイルはブラウザ内で処理されます。</p>
   </div>
 
@@ -392,8 +392,8 @@ body { height: 100dvh; }
           <option value="7.85" data-i18n="matFe">鉄 SS400</option>
           <option value="7.93" data-i18n="matSus">ステンレス SUS304</option>
           <option value="2.68" data-i18n="matAl">アルミ A5052</option>
-          <option value="8.5" data-i18n="matBrass">真鍮 C3604</option>
-          <option value="1.05" data-i18n="matAbs">樹脂 ABS</option>
+          <option value="8.5" data-i18n="matBrass">真鍮 C3604(目安)</option>
+          <option value="1.05" data-i18n="matAbs">樹脂 ABS(目安)</option>
           <option value="custom" data-i18n="matCustom">比重を手入力</option>
         </select></div>
       <div class="est-row"><b data-i18n="densLabel">比重:</b>
@@ -489,6 +489,7 @@ body { height: 100dvh; }
 
 <script src="https://unpkg.com/three@0.134.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://unpkg.com/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.22/dist/occt-import-js.js"></script>
 
 <script>
@@ -498,7 +499,7 @@ const I18N = {
     openFile: 'ファイルを開く',
     noFile: 'ファイルを選択してください',
     statusIdle: '待機中',
-    dropTitle: 'STP / STEP ファイルをドロップ',
+    dropTitle: 'STEP / IGES / STL ファイルをドロップ',
     dropSub: 'または上の「ファイルを開く」から選択。ファイルはブラウザ内で処理されます。',
     overlayLoading: '読み込み中...',
     guideTitle: '操作ガイド',
@@ -511,7 +512,7 @@ const I18N = {
     guideFaceExit: '面選択モードを終了',
     guideStart: '始める',
     infoFile: 'ファイル:', infoFaces: '面数:',
-    infoParts: '部品:', partsUnit: '点', matLabel: '材質:', matNone: '選択してください', matFe: '鉄 SS400', matSus: 'ステンレス SUS304', matAl: 'アルミ A5052', matBrass: '真鍮 C3604', matAbs: '樹脂 ABS', matCustom: '比重を手入力', densLabel: '比重:', volLabel: '体積:', wtLabel: '重量:', estNote: '概算(網目から計算)・単位 mm で計算', volBusy: '計算中...', volOpen: 'この部品は閉じていないため体積を出せません', volOpenAll: '閉じていない部品があるため、全体の体積を出せません', partWord: '部品',
+    infoParts: '部品:', partsUnit: '点', matLabel: '材質:', matNone: '選択してください', matFe: '鉄 SS400', matSus: 'ステンレス SUS304', matAl: 'アルミ A5052', matBrass: '真鍮 C3604(目安)', matAbs: '樹脂 ABS(目安)', matCustom: '比重を手入力', densLabel: '比重:', volLabel: '体積:', wtLabel: '重量:', estNote: '概算(網目から計算)・単位 mm で計算', estNoteStl: '概算(網目から計算)・STL は単位の情報が無いため mm とみなして計算', volBusy: '計算中...', volOpen: 'この部品は閉じていないため体積を出せません', volOpenAll: '閉じていない部品があるため、全体の体積を出せません', partWord: '部品',
     selTitle: '面情報 / 計測',
     selNote: '表示値はメッシュから算出した参考値です。正式な検査寸法にはCAD/図面値を使用してください。',
     btnCopy: 'コピー', btnClear: 'クリア',
@@ -529,7 +530,7 @@ const I18N = {
     themeTip: 'ライト/ダーク切替',
     partVisTip: '表示/非表示', partTransTip: '半透明',
     statusInit: '初期化中...', statusReady: '準備完了', statusInitFail: '初期化失敗',
-    statusNotInit: '未初期化', statusParsing: 'STPを解析中...', statusLoading: '読み込み中',
+    statusNotInit: '未初期化', statusParsing: 'ファイルを解析中...', statusLoading: '読み込み中',
     statusNoMesh: 'メッシュが見つかりません', statusDone: '表示完了', usageNote: '使われ方の回数(開いた数・使った機能)だけを数えています。ファイルの内容や名前は送りません',
     statusNoCopy: 'コピー非対応', statusImgCopied: '画像をコピーしました', statusCopyFail: 'コピーできません',
     statusCopied: 'コピーしました',
@@ -545,7 +546,7 @@ const I18N = {
     openFile: 'Open File',
     noFile: 'Select a file',
     statusIdle: 'Idle',
-    dropTitle: 'Drop STP / STEP File Here',
+    dropTitle: 'Drop STEP / IGES / STL File Here',
     dropSub: 'Or select from "Open File" above. Files are processed in your browser.',
     overlayLoading: 'Loading...',
     guideTitle: 'How to Use',
@@ -558,7 +559,7 @@ const I18N = {
     guideFaceExit: 'Exit face select mode',
     guideStart: 'Start',
     infoFile: 'File:', infoFaces: 'Faces:',
-    infoParts: 'Parts:', partsUnit: 'pcs', matLabel: 'Material:', matNone: 'Select...', matFe: 'Steel SS400', matSus: 'Stainless SUS304', matAl: 'Aluminum A5052', matBrass: 'Brass C3604', matAbs: 'Plastic ABS', matCustom: 'Enter density', densLabel: 'Density:', volLabel: 'Volume:', wtLabel: 'Weight:', estNote: 'Approximate (from mesh) / computed in mm', volBusy: 'Calculating...', volOpen: 'Volume unavailable: this part is not a closed shape', volOpenAll: 'Total volume unavailable: some parts are not closed shapes', partWord: 'Part',
+    infoParts: 'Parts:', partsUnit: 'pcs', matLabel: 'Material:', matNone: 'Select...', matFe: 'Steel SS400', matSus: 'Stainless SUS304', matAl: 'Aluminum A5052', matBrass: 'Brass C3604 (approx.)', matAbs: 'Plastic ABS (approx.)', matCustom: 'Enter density', densLabel: 'Density:', volLabel: 'Volume:', wtLabel: 'Weight:', estNote: 'Approximate (from mesh) / computed in mm', estNoteStl: 'Approximate (from mesh) - STL has no unit information, so mm is assumed', volBusy: 'Calculating...', volOpen: 'Volume unavailable: this part is not a closed shape', volOpenAll: 'Total volume unavailable: some parts are not closed shapes', partWord: 'Part',
     selTitle: 'Face Info / Measure',
     selNote: 'Values are reference estimates calculated from the display mesh. Use CAD/drawing values for inspection.',
     btnCopy: 'Copy', btnClear: 'Clear',
@@ -576,7 +577,7 @@ const I18N = {
     themeTip: 'Light/Dark toggle',
     partVisTip: 'Show/Hide', partTransTip: 'Transparent',
     statusInit: 'Initializing...', statusReady: 'Ready', statusInitFail: 'Init failed',
-    statusNotInit: 'Not initialized', statusParsing: 'Parsing STP...', statusLoading: 'Loading',
+    statusNotInit: 'Not initialized', statusParsing: 'Parsing file...', statusLoading: 'Loading',
     statusNoMesh: 'No mesh found', statusDone: 'Loaded', usageNote: 'We only count usage (files opened, features used). File contents and names are never sent.',
     statusNoCopy: 'Copy not supported', statusImgCopied: 'Image copied', statusCopyFail: 'Copy failed',
     statusCopied: 'Copied',
@@ -592,7 +593,7 @@ const I18N = {
     openFile: '打开文件',
     noFile: '请选择文件',
     statusIdle: '待机',
-    dropTitle: '拖放 STP / STEP 文件至此',
+    dropTitle: '拖放 STEP / IGES / STL 文件至此',
     dropSub: '或从上方"打开文件"选择。文件在浏览器内处理。',
     overlayLoading: '加载中...',
     guideTitle: '操作指南',
@@ -605,7 +606,7 @@ const I18N = {
     guideFaceExit: '退出面选择模式',
     guideStart: '开始',
     infoFile: '文件:', infoFaces: '面数:',
-    infoParts: '零件:', partsUnit: '个', matLabel: '材质:', matNone: '请选择', matFe: '钢 SS400', matSus: '不锈钢 SUS304', matAl: '铝 A5052', matBrass: '黄铜 C3604', matAbs: '塑料 ABS', matCustom: '手动输入比重', densLabel: '比重:', volLabel: '体积:', wtLabel: '重量:', estNote: '概算(由网格计算)・以 mm 为单位计算', volBusy: '计算中...', volOpen: '该零件不是封闭形状,无法计算体积', volOpenAll: '存在非封闭零件,无法计算总体积', partWord: '零件',
+    infoParts: '零件:', partsUnit: '个', matLabel: '材质:', matNone: '请选择', matFe: '钢 SS400', matSus: '不锈钢 SUS304', matAl: '铝 A5052', matBrass: '黄铜 C3604(参考值)', matAbs: '塑料 ABS(参考值)', matCustom: '手动输入比重', densLabel: '比重:', volLabel: '体积:', wtLabel: '重量:', estNote: '概算(由网格计算)・以 mm 为单位计算', estNoteStl: '概算(由网格计算)・STL 不含单位信息,按 mm 计算', volBusy: '计算中...', volOpen: '该零件不是封闭形状,无法计算体积', volOpenAll: '存在非封闭零件,无法计算总体积', partWord: '零件',
     selTitle: '面信息 / 测量',
     selNote: '显示值为从显示网格计算的参考值，请使用CAD/图纸值进行正式检查。',
     btnCopy: '复制', btnClear: '清除',
@@ -623,7 +624,7 @@ const I18N = {
     themeTip: '切换亮色/暗色',
     partVisTip: '显示/隐藏', partTransTip: '半透明',
     statusInit: '初始化中...', statusReady: '就绪', statusInitFail: '初始化失败',
-    statusNotInit: '未初始化', statusParsing: '解析STP中...', statusLoading: '加载中',
+    statusNotInit: '未初始化', statusParsing: '解析文件中...', statusLoading: '加载中',
     statusNoMesh: '未找到网格', statusDone: '加载完成', usageNote: '仅统计使用次数(打开数、使用的功能)。不会发送文件内容或文件名。',
     statusNoCopy: '不支持复制', statusImgCopied: '图像已复制', statusCopyFail: '复制失败',
     statusCopied: '已复制',
@@ -639,7 +640,7 @@ const I18N = {
     openFile: 'เปิดไฟล์',
     noFile: 'กรุณาเลือกไฟล์',
     statusIdle: 'รอ',
-    dropTitle: 'วางไฟล์ STP / STEP ที่นี่',
+    dropTitle: 'วางไฟล์ STEP / IGES / STL ที่นี่',
     dropSub: 'หรือเลือกจาก "เปิดไฟล์" ด้านบน ไฟล์ถูกประมวลผลในเบราว์เซอร์',
     overlayLoading: 'กำลังโหลด...',
     guideTitle: 'วิธีใช้',
@@ -652,7 +653,7 @@ const I18N = {
     guideFaceExit: 'ออกจากโหมดเลือกหน้า',
     guideStart: 'เริ่ม',
     infoFile: 'ไฟล์:', infoFaces: 'หน้า:',
-    infoParts: 'ชิ้นส่วน:', partsUnit: 'ชิ้น', matLabel: 'วัสดุ:', matNone: 'เลือกวัสดุ', matFe: 'เหล็ก SS400', matSus: 'สแตนเลส SUS304', matAl: 'อลูมิเนียม A5052', matBrass: 'ทองเหลือง C3604', matAbs: 'พลาสติก ABS', matCustom: 'กรอกความถ่วงจำเพาะ', densLabel: 'ความถ่วงจำเพาะ:', volLabel: 'ปริมาตร:', wtLabel: 'น้ำหนัก:', estNote: 'ค่าประมาณ (คำนวณจากเมช) หน่วย mm', volBusy: 'กำลังคำนวณ...', volOpen: 'ชิ้นส่วนนี้ไม่ปิดสนิท จึงคำนวณปริมาตรไม่ได้', volOpenAll: 'มีชิ้นส่วนที่ไม่ปิดสนิท จึงคำนวณปริมาตรรวมไม่ได้', partWord: 'ชิ้นส่วน',
+    infoParts: 'ชิ้นส่วน:', partsUnit: 'ชิ้น', matLabel: 'วัสดุ:', matNone: 'เลือกวัสดุ', matFe: 'เหล็ก SS400', matSus: 'สแตนเลส SUS304', matAl: 'อลูมิเนียม A5052', matBrass: 'ทองเหลือง C3604 (ค่าประมาณ)', matAbs: 'พลาสติก ABS (ค่าประมาณ)', matCustom: 'กรอกความถ่วงจำเพาะ', densLabel: 'ความถ่วงจำเพาะ:', volLabel: 'ปริมาตร:', wtLabel: 'น้ำหนัก:', estNote: 'ค่าประมาณ (คำนวณจากเมช) หน่วย mm', estNoteStl: 'ค่าประมาณ (คำนวณจากเมช) - STL ไม่มีข้อมูลหน่วย จึงถือว่าเป็น mm', volBusy: 'กำลังคำนวณ...', volOpen: 'ชิ้นส่วนนี้ไม่ปิดสนิท จึงคำนวณปริมาตรไม่ได้', volOpenAll: 'มีชิ้นส่วนที่ไม่ปิดสนิท จึงคำนวณปริมาตรรวมไม่ได้', partWord: 'ชิ้นส่วน',
     selTitle: 'ข้อมูลหน้า / วัด',
     selNote: 'ค่าที่แสดงเป็นค่าอ้างอิงจากเมช กรุณาใช้ค่า CAD/แบบสำหรับการตรวจสอบ',
     btnCopy: 'คัดลอก', btnClear: 'ล้าง',
@@ -670,7 +671,7 @@ const I18N = {
     themeTip: 'สลับสว่าง/มืด',
     partVisTip: 'แสดง/ซ่อน', partTransTip: 'โปร่งแสง',
     statusInit: 'กำลังเริ่มต้น...', statusReady: 'พร้อม', statusInitFail: 'เริ่มต้นล้มเหลว',
-    statusNotInit: 'ยังไม่เริ่มต้น', statusParsing: 'กำลังแยก STP...', statusLoading: 'กำลังโหลด',
+    statusNotInit: 'ยังไม่เริ่มต้น', statusParsing: 'กำลังแยกไฟล์...', statusLoading: 'กำลังโหลด',
     statusNoMesh: 'ไม่พบเมช', statusDone: 'โหลดแล้ว', usageNote: 'นับเฉพาะจำนวนการใช้งาน (จำนวนไฟล์ที่เปิด ฟีเจอร์ที่ใช้) ไม่ส่งเนื้อหาหรือชื่อไฟล์',
     statusNoCopy: 'ไม่รองรับการคัดลอก', statusImgCopied: 'คัดลอกภาพแล้ว', statusCopyFail: 'คัดลอกล้มเหลว',
     statusCopied: 'คัดลอกแล้ว',
@@ -686,7 +687,7 @@ const I18N = {
     openFile: 'Buka File',
     noFile: 'Pilih file',
     statusIdle: 'Siaga',
-    dropTitle: 'Lepas File STP / STEP di Sini',
+    dropTitle: 'Lepas File STEP / IGES / STL di Sini',
     dropSub: 'Atau pilih dari "Buka File" di atas. File diproses di browser Anda.',
     overlayLoading: 'Memuat...',
     guideTitle: 'Cara Penggunaan',
@@ -699,7 +700,7 @@ const I18N = {
     guideFaceExit: 'Keluar mode pilih wajah',
     guideStart: 'Mulai',
     infoFile: 'File:', infoFaces: 'Wajah:',
-    infoParts: 'Komponen:', partsUnit: 'buah', matLabel: 'Bahan:', matNone: 'Pilih...', matFe: 'Baja SS400', matSus: 'Stainless SUS304', matAl: 'Aluminium A5052', matBrass: 'Kuningan C3604', matAbs: 'Plastik ABS', matCustom: 'Input berat jenis', densLabel: 'Berat jenis:', volLabel: 'Volume:', wtLabel: 'Berat:', estNote: 'Perkiraan (dari mesh) / dihitung dalam mm', volBusy: 'Menghitung...', volOpen: 'Volume tidak dapat dihitung: komponen ini bukan bentuk tertutup', volOpenAll: 'Volume total tidak dapat dihitung: ada komponen yang tidak tertutup', partWord: 'Komponen',
+    infoParts: 'Komponen:', partsUnit: 'buah', matLabel: 'Bahan:', matNone: 'Pilih...', matFe: 'Baja SS400', matSus: 'Stainless SUS304', matAl: 'Aluminium A5052', matBrass: 'Kuningan C3604 (perkiraan)', matAbs: 'Plastik ABS (perkiraan)', matCustom: 'Input berat jenis', densLabel: 'Berat jenis:', volLabel: 'Volume:', wtLabel: 'Berat:', estNote: 'Perkiraan (dari mesh) / dihitung dalam mm', estNoteStl: 'Perkiraan (dari mesh) - STL tidak memiliki informasi satuan, dihitung sebagai mm', volBusy: 'Menghitung...', volOpen: 'Volume tidak dapat dihitung: komponen ini bukan bentuk tertutup', volOpenAll: 'Volume total tidak dapat dihitung: ada komponen yang tidak tertutup', partWord: 'Komponen',
     selTitle: 'Info Wajah / Ukur',
     selNote: 'Nilai yang ditampilkan adalah referensi dari mesh tampilan. Gunakan nilai CAD/gambar untuk inspeksi resmi.',
     btnCopy: 'Salin', btnClear: 'Hapus',
@@ -717,7 +718,7 @@ const I18N = {
     themeTip: 'Ganti terang/gelap',
     partVisTip: 'Tampilkan/Sembunyikan', partTransTip: 'Transparan',
     statusInit: 'Menginisialisasi...', statusReady: 'Siap', statusInitFail: 'Inisialisasi gagal',
-    statusNotInit: 'Belum diinisialisasi', statusParsing: 'Mengurai STP...', statusLoading: 'Memuat',
+    statusNotInit: 'Belum diinisialisasi', statusParsing: 'Mengurai file...', statusLoading: 'Memuat',
     statusNoMesh: 'Mesh tidak ditemukan', statusDone: 'Dimuat', usageNote: 'Kami hanya menghitung penggunaan (file dibuka, fitur dipakai). Isi dan nama file tidak pernah dikirim.',
     statusNoCopy: 'Salin tidak didukung', statusImgCopied: 'Gambar disalin', statusCopyFail: 'Salin gagal',
     statusCopied: 'Disalin',
@@ -751,7 +752,7 @@ function applyI18n() {
   document.documentElement.lang = currentLang;
   if (!faceMode) $('hint').textContent = t('hintNormal');
   buildViewGrid();
-  try{ if(est.parts.length){ $('i-parts').textContent=est.parts.length+' '+t('partsUnit'); estRender(); } }catch(_){}
+  try{ if(est.parts.length){ $('i-parts').textContent=partsText(est.parts.length); estRender(); } }catch(_){}
 }
 
 function setLanguage(lang) {
@@ -1305,7 +1306,24 @@ async function loadSTP(buffer,filename){
   showOverlay(t('statusParsing'));setStatus('loading',t('statusLoading'));
   await new Promise(r=>setTimeout(r,30));
   try{
-    const result=occt.ReadStepFile(new Uint8Array(buffer),{linearUnit:'millimeter'});
+    const ext=(String(filename).match(/\.([^.]+)$/)||[,''])[1].toLowerCase();
+    const fmt=(ext==='stl')?'stl':(ext==='igs'||ext==='iges')?'iges':'step';
+    let result;
+    if(fmt==='stl'){
+      // STL は部品も単位も持たない。three.js の STLLoader(バイナリ/ASCII 両対応)で読み、1 部品として扱う
+      const g=new THREE.STLLoader().parse(buffer);
+      const pa=g.attributes.position.array;
+      if(!pa||pa.length<9)throw new Error(t('statusNoMesh'));
+      const mesh1={name:String(filename).replace(/\.[^.]+$/,''),attributes:{position:{array:pa}}};
+      if(g.attributes.normal)mesh1.attributes.normal={array:g.attributes.normal.array};
+      result={meshes:[mesh1]};
+    }else if(fmt==='iges'){
+      result=occt.ReadIgesFile(new Uint8Array(buffer),{linearUnit:'millimeter'});
+    }else{
+      result=occt.ReadStepFile(new Uint8Array(buffer),{linearUnit:'millimeter'});
+    }
+    est.stl=(fmt==='stl');
+    try{const en=document.querySelector('.est-sub[data-i18n]');if(en){en.setAttribute('data-i18n',estNoteKey());en.textContent=t(estNoteKey());}}catch(_){}
     if(!result||!result.meshes||result.meshes.length===0)throw new Error(t('statusNoMesh'));
 
     if(modelGroup)scene.remove(modelGroup);
@@ -1388,8 +1406,9 @@ async function loadSTP(buffer,filename){
     setStatus('ready',t('statusDone'));
 
     usageOpened(buffer.byteLength,result.meshes.length);
-    $('i-parts').textContent=result.meshes.length+' '+t('partsUnit');
-    usageMark('f_count');
+    usageMark(fmt==='stl'?'fmt_stl':fmt==='iges'?'fmt_iges':'fmt_step',true);
+    $('i-parts').textContent=partsText(result.meshes.length);
+    if(!est.stl)usageMark('f_count');
     estStart(result.meshes);
 
     if(!localStorage.getItem('stp-guide-shown')){
@@ -1702,7 +1721,9 @@ document.addEventListener('keydown',e=>{
 });
 
 /* ── 体積・重量(網目から計算した概算) ── */
-const est={parts:[],total:null,busy:false,token:0,sg:null,weightMarked:false};
+const est={parts:[],total:null,busy:false,token:0,sg:null,weightMarked:false,stl:false};
+function partsText(n){return est.stl?'—':n+' '+t('partsUnit');}
+function estNoteKey(){return est.stl?'estNoteStl':'estNote';}
 const estTick=()=>new Promise(r=>setTimeout(r,0));
 async function estPartVolume(m,token){
   const pos=m.attributes.position.array;
@@ -1791,7 +1812,7 @@ function estSelHtml(){
       if(w){h+=`<div class="sel-row"><span>${t('wtLabel').replace(/[:]$/,'')}</span><span class="sel-val">${w}</span></div>`;estMarkWeight();}
     }
   });
-  return h+`<div class="sel-note">${t('estNote')}</div>`;
+  return h+`<div class="sel-note">${t(estNoteKey())}</div>`;
 }
 function estMarkWeight(){ if(!est.weightMarked){est.weightMarked=true;usageMark('f_weight');} }
 function estRender(){
@@ -1805,7 +1826,7 @@ function estRender(){
     w.textContent=s||'-';
     if(s)estMarkWeight();
   }
-  if(est.parts.length)$('i-parts').textContent=est.parts.length+' '+t('partsUnit');
+  if(est.parts.length)$('i-parts').textContent=partsText(est.parts.length);
   renderPartsPanel();
   updateSelectionPanel();
 }
